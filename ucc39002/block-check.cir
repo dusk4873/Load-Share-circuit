@@ -1,0 +1,34 @@
+UCC39002 block checks: amplifier, ADJ, fast engagement, disable, headroom
+.include UCC39002.lib
+VADJ adjbias 0 5
+VIN input 0 0.05
+VSTART sinput 0 0.025
+VHIGH highinput 0 0.4
+VDIS disable 0 1
+VLS forcedls 0 4
+VE1 ea1 0 2
+VE2 ea2 0 2
+VE3 ea3 0 2
+VE4 ea4 0 2
+VM1 adjbias adj1 0
+VM2 adjbias adj2 0
+VM3 adjbias adj3 0
+VM4 adjbias adj4 0
+X1 input cm1 cso1 ls1 ea1 adj1 0 UCC39002 VCC_MODEL=12
+RG1 cm1 0 1k
+RF1 cso1 cm1 39k
+X2 sinput cm2 cso2 forcedls ea2 adj2 0 UCC39002 VCC_MODEL=12
+RG2 cm2 0 1k
+RF2 cso2 cm2 39k
+X3 0 disable cso3 forcedls ea3 adj3 0 UCC39002 VCC_MODEL=12
+X4 highinput cm4 cso4 ls4 ea4 adj4 0 UCC39002 VCC_MODEL=6
+RG4 cm4 0 1k
+RF4 cso4 cm4 39k
+.nodeset v(ls1)=2 v(ls4)=1
+.tran 1u 100u
+.meas tran current_amp FIND v(cso1) AT=100u
+.meas tran adjust_normal FIND i(VM1) AT=100u
+.meas tran adjust_fast FIND i(VM2) AT=100u
+.meas tran adjust_disabled FIND i(VM3) AT=100u
+.meas tran supply_headroom FIND v(cso4) AT=100u
+.end

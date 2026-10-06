@@ -1,0 +1,45 @@
+UCC39002 functional bench with synthetic averaged power modules
+.include UCC39002.lib
+* The module models below are illustrative, not validated converter models.
+VADJBIAS adjbias 0 5
+VADJA adjbias adja 0
+VADJB adjbias adjb 0
+XA sha cma csoa ls eaa adja 0 UCC39002 VCC_MODEL=12
+XB shb cmb csob ls eab adjb 0 UCC39002 VCC_MODEL=12
+* Noninverting current amplifier gain 40.
+RGA cma 0 1k
+RFA csoa cma 39k
+RGB cmb 0 1k
+RFB csob cmb 39k
+CEA eaa 0 10u
+CEB eab 0 10u
+* Illustrative modules: 0.1 ohm droop, 50us response, 50 V/A trim gain.
+* ADJ is biased at 5V to maintain its required compliance.
+VSETA basea 0 PULSE(12.05 11.98 40m 100u 100u 40m 80m)
+BCA targeta 0 V={V(basea)+50*I(VADJA)}
+BCB targetb 0 V={12+50*I(VADJB)}
+RCA targeta cmda 1k
+RCB targetb cmdb 1k
+CCA cmda 0 50n
+CCB cmdb 0 50n
+BMA 0 out I={max(0,V(cmda,out)/0.1)}
+BMB 0 out I={max(0,V(cmdb,out)/0.1)}
+BSHA sha 0 V={0.01*max(0,V(cmda,out)/0.1)}
+BSHB shb 0 V={0.01*max(0,V(cmdb,out)/0.1)}
+* Resistive load doubles at 20ms.
+VLOAD loadctl 0 PULSE(1 2 20m 100u 100u 100m 200m)
+BLOAD out 0 I={V(out)*V(loadctl)/1.2}
+COUT out 0 100u
+.nodeset v(ls)=2 v(csoa)=2 v(csob)=2 v(out)=11.5
+.tran 5u 80m
+.meas tran ia_initial FIND par('v(sha)/0.01') AT=15m
+.meas tran ib_initial FIND par('v(shb)/0.01') AT=15m
+.meas tran ia_loaded FIND par('v(sha)/0.01') AT=35m
+.meas tran ib_loaded FIND par('v(shb)/0.01') AT=35m
+.meas tran ia_handoff FIND par('v(sha)/0.01') AT=75m
+.meas tran ib_handoff FIND par('v(shb)/0.01') AT=75m
+.meas tran adj_a_initial FIND i(VADJA) AT=15m
+.meas tran adj_b_initial FIND i(VADJB) AT=15m
+.meas tran adj_a_handoff FIND i(VADJA) AT=75m
+.meas tran adj_b_handoff FIND i(VADJB) AT=75m
+.end

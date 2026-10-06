@@ -1,0 +1,62 @@
+* Simplified seven-terminal UCC39002 behavioral approximation.
+* Independently authored from TI SLUS495J; NOT an official TI model.
+* Logical terminal order, NOT physical IC pin numbers:
+* CS+ CS- CSO SHARE EAO ADJ GND (CSP CSM CSO SHARE EAO ADJ GND).
+* CSO retains external current-amplifier feedback; EAO retains external
+* compensation. ADJ is a CURRENT SINK, not a voltage command.
+* Supply is always on; VCC_MODEL sets output headroom only.
+* Use VCC_MODEL >=4.575V and within the datasheet operating range.
+* Example: XU csp csm cso share eao adj 0 UCC39002 VCC_MODEL=12
+* Omits supply startup/UVLO, supply current, LS fault protection, VDD clamp,
+* temperature/input bias errors, detailed compliance and extra amplifier poles.
+* EAO sink limit, intrinsic capacitances, buffer impedances and ADJ fit
+* are modeling assumptions. Maintain ADJ >= EAO+1V (>=4V in fast engagement).
+* This interface differs from the simplified UC3907 voltage-command ADJ.
+
+.subckt UCC39002 CSP CSM CSO SHARE EAO ADJ GND params: VCC_MODEL=12
+.param CSA_GM=1.256637m CSA_RO=25.1646meg CSA_C=100p
+.param EA_GM=14m EA_RO=10meg EA_C=50p EA_ISINK=850u
+.param BUS_R=10 LOGIC_WIDTH=5m
+
+* Always-powered model; retains external disable through CS inputs.
+BEN en GND V={0.5*(1+tanh((0.5-V(CSM,CSP))/LOGIC_WIDTH))}
+
+* Uncommitted current amplifier: external feedback sets closed-loop gain.
+* gm*ro approximately 90dB; gm/(2*pi*C) approximately 2MHz.
+BCSA GND caint I={min(1.5m,max(-1.5m,CSA_GM*V(CSP,CSM)))}
+RCSA caint GND {CSA_RO}
+CCSA caint GND {CSA_C}
+BCSCL caint GND I={max(0,V(caint,GND)-max(0,VCC_MODEL-1))
++ -max(0,min(0.1,max(0,VCC_MODEL-1))-V(caint,GND))}
+* Separate output buffer prevents feedback-resistor loading of gain stage.
+* Its 10-ohm output impedance is an assumption.
+BCSOUT GND CSO I={min(1.5m,max(-1.5m,V(caint,CSO)/10))}
+RCSOUT CSO GND 100meg
+
+* Fast engagement depends on the externally driven LS bus.
+BST start GND V={0.5*(1+tanh((0.8*V(SHARE,GND)-V(CSO,GND))/LOGIC_WIDTH))}
+* Source-only driver. BUS_R is an assumed output impedance.
+* 1.5mA is the normal driver limit; short-circuit boost is omitted.
+BBUS GND SHARE I={V(en,GND)*(1-V(start,GND))*min(1.5m,
++ max(0,(min(V(CSO,GND),max(0,VCC_MODEL-1.7))-V(SHARE,GND))/BUS_R))}
+RLS SHARE GND 100k
+
+* Receiver filter; buffer prevents the filter from loading LS.
+BRECV rsrc GND V={V(SHARE,GND)}
+RFILT rsrc recv 1k
+CFILT recv GND 10.61033n
+
+* Error amplifier has a 25mV intentional offset.
+BEA GND EAO I={V(en,GND)*min(850u,max(-EA_ISINK,
++ EA_GM*(V(recv,CSO)-0.025)))}
+REA EAO GND {EA_RO}
+CEA EAO GND {EA_C}
+BEACL EAO GND I={max(0,V(EAO,GND)-3.65)-max(0,-V(EAO,GND))}
+
+* EAO-controlled sink through the equivalent internal 500-ohm resistor.
+* 25mV effective deadband fits the typical 3.95mA at EAO=2V.
+* This fit is a modeling choice, not a guaranteed transfer curve.
+BCMD acmd GND V={V(en,GND)*
++ (V(start,GND)*3+(1-V(start,GND))*max(0,V(EAO,GND)))}
+BADJ ADJ GND I={min(6m,max(0,(V(acmd,GND)-0.025)/500))}
+.ends UCC39002
