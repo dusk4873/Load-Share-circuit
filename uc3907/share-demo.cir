@@ -1,0 +1,22 @@
+Simplified five-terminal UC3907 functional demonstration
+.include UC3907.sub
+* Externally driven shunt voltages test controller logic, not converters.
+VCSA csa 0 0.100
+VCSB csb 0 PULSE(0.075 0.125 20m 10u 10u 20m 40m)
+XA csa 0 bus adja 0 UC3907
+XB csb 0 bus adjb 0 UC3907
+* Standalone controller and controller with bus shorted to ground.
+XS csa 0 solo_bus adj_solo 0 UC3907
+XZ csa 0 0 adj_short 0 UC3907
+.tran 10u 60m
+.meas tran adj_a_master FIND v(adja) AT=10m
+.meas tran adj_b_slave FIND v(adjb) AT=10m
+.meas tran adj_a_slave FIND v(adja) AT=35m
+.meas tran adj_b_master FIND v(adjb) AT=35m
+.meas tran adj_a_return_master FIND v(adja) AT=55m
+.meas tran adj_b_return_slave FIND v(adjb) AT=55m
+.meas tran standalone FIND v(adj_solo) AT=55m
+.meas tran short_bus FIND v(adj_short) AT=55m
+.meas tran bus_first FIND v(bus) AT=10m
+.meas tran bus_second FIND v(bus) AT=35m
+.end
